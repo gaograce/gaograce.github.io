@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>数独</title>
+    <link rel="stylesheet" href="https://cdn.staticfile.org/font-awesome/4.7.0/css/font-awesome.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+</head>
+<body>
+<div>
+    <button>1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>6</button><button>7</button><button>8</button><button>9</button>
+    <button onclick="pending()"><i class="fa fa-question"></i></button><button onclick="check()"><i class="fa fa-check"></i></button>
+    <table id="table" border="1" cellspacing="10">
+        <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    </table>
+    <div style="width: 534px; height: 534px; position: absolute; top:50px; z-index: -1;background: #f1f3f1">
+        <div style="margin-top: 5px;" class="row"><div class="border"></div><div class="border"></div><div class="border"></div></div>
+        <div class="row">
+            <div class="border"></div><div class="border"></div><div class="border"></div>
+        </div>
+        <div class="row"><div class="border"></div><div class="border"></div><div class="border"></div></div>
+    </div>
+
+</div>
+<script>
+    let grid = []
+    let row = []
+    let col = []
+    let sub = []
+    let num = 0
+    let flag = []
+    let color = [
+        '#efc6c6',
+        '#f1c8b7',
+        '#e9e1b2',
+        '#c8e5ae',
+        '#b1eedd',
+        '#a8dce9',
+        '#afd2ec',
+        '#a3ace5',
+        '#d5b2e9']
+    for(let i = 0; i < 9; i++) {
+        row.push(new Set())
+        col.push(new Set())
+        sub.push(new Set())
+    }
+    for(let i = 0; i < 9; i++) {
+        let cur = []
+        flag.push(new Array(9).fill(false))
+        for(let j = 0; j < 9; j++) {
+            while (row[i].has(num)) {
+                num = (num + 1) % 9
+            }
+            while (col[j].has(num)) {
+                num = (num + 1) % 9
+            }
+            while (sub[(Math.floor(i / 3)) * 3 + Math.floor(j / 3)].has(num)) {
+                num = (num + 1) % 9
+            }
+            cur.push(num + 1)
+            row[i].add(num)
+            col[j].add(num)
+            sub[(Math.floor(i / 3)) * 3 + Math.floor(j / 3)].add(num)
+            num = (num + 1) % 9
+        }
+        grid.push(cur)
+    }
+    function randomSwapRow() {
+        let x = Math.floor(Math.random() * 3), y1 = Math.floor(Math.random() * 3), y2 = Math.floor(Math.random() * 3)
+        for(let j = 0; j < 9; j++) {
+            let tmp = grid[x * 3 + y1][j]
+            grid[x * 3 + y1][j] = grid[x * 3 + y2][j]
+            grid[x * 3 + y2][j] = tmp
+        }
+    }
+    function randomSwapCol() {
+        let x = Math.floor(Math.random() * 3), y1 = Math.floor(Math.random() * 3), y2 = Math.floor(Math.random() * 3)
+        for(let i = 0; i < 9; i++) {
+            let tmp = grid[i][x * 3 + y1]
+            grid[i][x * 3 + y1] = grid[i][x * 3 + y2]
+            grid[i][x * 3 + y2] = tmp
+        }
+    }
+    for(let i = 0; i < 10; i++) {
+        randomSwapRow()
+        randomSwapCol()
+    }
+
+    console.log(JSON.stringify(grid))
+    for(let i = 0; i < 30; i++) {
+        let x = Math.floor(Math.random() * 9), y = Math.floor(Math.random() * 9)
+        grid[x][y] = ' '
+    }
+    let tds = document.getElementById('table').children[0].children
+    for(let i = 0; i < 9; i++) {
+        for (let j = 0; j < 9; j++) {
+            if(grid[i][j] == ' ') {
+                tds[i].children[j].style.background = 'grey'
+                tds[i].children[j].style.color = 'white'
+            }
+            tds[i].children[j].innerHTML = grid[i][j]
+        }
+    }
+    let last, lastIdx
+    $('table').find('td').each((idx, ele) => ele.addEventListener('click', () => {
+        let i = Math.floor(idx / 9), j = idx - 9 * i
+        console.log(i, j, grid[i][j], grid[i][j] == ' ')
+        if(last) {
+            console.log(flag[lastIdx[0]][lastIdx[1]])
+            last.style.background = 'grey'
+        }
+        if(grid[i][j] == ' ') {
+            last = ele
+            lastIdx = [i, j]
+            ele.style.background = '#ccc'
+        } else {
+            last = undefined
+        }
+    }))
+    $('body').find('button').each((idx, ele) => {
+        ele.style.background = color[idx]
+        ele.addEventListener('click', () => {
+            if (ele.innerText >= '1' && ele.innerText <= '9') {
+                console.log(idx, ele.innerText)
+                if (last) {
+                    last.innerText = ele.innerText
+                }
+            }
+        })
+    })
+    document.body.addEventListener('keydown', e => {
+        if(e.key >= '1' && e.key <= '9' && last) {
+            last.innerText = e.key
+        }
+    })
+    function pending() {
+        if(last && last.innerText) {
+            flag[lastIdx[0]][lastIdx[1]] = !flag[lastIdx[0]][lastIdx[1]]
+            if(flag[lastIdx[0]][lastIdx[1]]) {
+                last.style.border = '3px solid #e06666'
+            } else {
+                last.style.border = '3px solid black'
+            }
+
+        }
+    }
+    function check() {
+        row.forEach(r => r.clear())
+        col.forEach(r => r.clear())
+        sub.forEach(r => r.clear())
+        let success = true
+        let tds = $('table').find('td');
+        for(let idx = 0; idx < tds.length; idx++) {
+            let i = Math.floor(idx / 9), j = idx - 9 * i, ele = tds[idx]
+            let num = ele.innerText
+            if(ele.innerText == ' ' || row[i].has(num) || col[j].has(num) || sub[(Math.floor(i / 3)) * 3 + Math.floor(j / 3)].has(num)) {
+                success = false
+                break
+            }
+            row[i].add(num)
+            col[j].add(num)
+            sub[(Math.floor(i / 3)) * 3 + Math.floor(j / 3)].add(num)
+        }
+        if(success) {
+            alert("Success!")
+        } else {
+            alert("Failed!")
+        }
+    }
+</script>
+<style>
+    table{
+        border-radius: 5px;
+        background: transparent;
+    }
+    td{
+        width: 40px;
+        height: 40px;
+        background: white;
+        text-align: center;
+        font-weight: bold;
+        border: 3px solid black;
+    }
+    button{
+        color: black;
+        background: white;
+        padding: 10px 15px;
+        margin:2px;
+    }
+    .border{
+        width: 170px;
+        height: 170px;
+        border: 2px ridge #1f401d;
+        display: inline-block;
+        margin-top: 1px;
+        margin-left: 1px;
+    }
+    .row{
+        height: 175px;margin-left: 5px;
+    }
+</style>
+</body>
+
+</html>

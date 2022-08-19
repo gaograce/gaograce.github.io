@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en" style="width: 100%;height: 100%;">
+<head>
+    <meta charset="UTF-8">
+    <title>扫雷</title>
+</head>
+<body style="width: 100%; height: 100%;margin: 0">
+<div style="width: 210px; padding: 30px;margin-top:20px;float: left;height: 100%;border-right: 1px solid #eee">
+    <div class="padding5"><label>雷数：</label><input id="cnt" value="10"/></div>
+    <div class="padding5"><label>行数：</label><input id="row" value="10"/></div>
+    <div class="padding5"><label>列数：</label><input id="col" value="20"/></div>
+    <button onclick="start()" style="margin-top: 5px">开始</button></div>
+<div style="position: absolute;top: 80px;left: 50%; transform: translate(-50%, 0)">
+    <div style="border-bottom: 1px solid #eee;width: 100%;margin-bottom: 10px;">
+        <div style="font-weight: bold;display: none;width: 180px;margin: auto;font-size: 20px;" id="rank1"><label>最快记录：</label><label id="r1">0</label><label>s</label></div>
+    </div>
+    <div style="margin: auto;width: 460px">
+        <button onclick="showRanks()" style="float: left;margin-bottom: 5px;">Ranks</button>
+        <div style="display: inline-block;margin-top: 2px;margin-left: 5px;"><label>剩余雷数目：</label><label id="remain">40</label>
+            <label>用时：</label><label id="time">00:00:00</label></div>
+    </div>
+    <canvas id="canvas" width="800px" height="600px" style="border: 5px solid #30451b;"></canvas>
+</div>
+<div id="success" style="width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); position: relative;z-index: 99999; display: none">
+    <div style="position: absolute;top: 30%;left: 50%; transform: translate(-50%, -50%); font-size: 50px;color: white">
+        <div style="margin-left: 50px">Success!</div>
+        <div style="font-size: 18px;padding: 20px;"><label style="padding: 10px">Name:</label><input id="name"/>
+            <button onclick="save()">OK</button>
+        </div>
+    </div>
+</div>
+<div id="noRank" style="width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); position: relative;z-index: 99999; display: none" onclick="show(this, false)">
+    <div style="position: absolute;top: 50%;left: 50%; transform: translate(-50%, -50%); font-size: 50px;color: white">
+        <div>No Ranks!</div>
+    </div>
+</div>
+<div id="rank" style="width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); position: relative;z-index: 99999; display: none" onclick="show(this, false)">
+    <div style="position: absolute;top: 20%;left: 50%; transform: translate(-50%, -50%); font-size: 50px;color: white">
+        <div id="rankList" style="font-size: 20px"></div>
+    </div>
+</div>
+<div id="fail" style="width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); position: relative;z-index: 99999; display: none"
+     onclick="show(this, false)">
+    <div style="position: absolute;top: 50%;left: 50%; transform: translate(-50%, -50%); font-size: 50px;color: white">Failed!</div>
+</div>
+</body>
+<script>
+    let closeBlock = '#99a989'
+    let m = 40, n = 30, cnt = 100, timeCost
+    let db
+    let last
+    let inGame = false
+    let color = ["SeaGreen", "orange", "red", "green", "cyan", "blue", "purple", "pink"]
+    let c = document.getElementById('canvas')
+    let ctx = c.getContext('2d')
+    let board
+    let dir = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]]
+    let startTime = 0, timeInter, dbInit = false
+    function start() {
+        if(timeInter) {
+            clearInterval(timeInter)
+            timeInter = undefined
+        }
+        startTime = new Date()
+        last = undefined
+        m = parseInt(document.getElementById('col').value)
+        n = parseInt(document.getElementById('row').value)
+        cnt = parseInt(document.getElementById('cnt').value)
+        if(m < 10 || m > 60) {
+            alert("列数目必须位于10~60之间！")
+            return
+        }
+        if(n < 5 || n > 40) {
+            alert("行数目必须位于5~40之间！")
+            return
+        }
+        if(cnt <= 1) {
+            alert("雷数目必须大于1！")
+            return
+        }
+        if(cnt > m * n / 2) {
+            alert("雷数目不可以多于一半！")
+            return
+        }
+        board = init()
+        let tmp = cnt
+        while (tmp > 0) {
+            let i = Math.floor(Math.random() * m), j = Math.floor(Math.random() * n)
+            if(board[i][j] == ' ') {
+                board[i][j] = 'M'
+                tmp--
+            }
+        }
+        inGame = true
+        refresh()
+        timeInter = setInterval(() => {
+            timeCost = Math.floor((new Date() - startTime) / 1000)
+            let seconds = timeCost
+            let hour = Math.floor(seconds / 3600), minutes = Math.floor((seconds - hour * 3600) / 60)
+            seconds = seconds - hour * 3600 - minutes * 60
+            let innerText = (hour >= 10 ? hour : '0' + hour) + ':'
+                + (minutes >= 10 ? minutes : '0' + minutes) + ':' + (seconds >= 10 ? seconds : '0' + seconds)
+            document.getElementById('time').innerText = innerText
+        }, 100)
+        if(!dbInit) {
+            dbInit = true
+            initDb()
+        }
+        let initRanks = setInterval(() => {
+            if(db) {
+                getRanks(cur => {
+                    if(cur.length) {
+                        document.getElementById('rank1').style.display = 'block'
+                        document.getElementById('r1').innerText = cur[0].timeCost
+                    } else {
+                        document.getElementById('rank1').style.display = 'none'
+                    }
+                })
+                clearInterval(initRanks)
+            }
+        }, 100)
+    }
+    document.getElementById('canvas').addEventListener('click', (e) => {
+        let x = Math.floor(e.offsetX / 20), y = Math.floor(e.offsetY / 20)
+        if(inGame) {
+            last = [x, y]
+            click(x, y)
+            refresh()
+        }
+
+    })
+    document.getElementById('canvas').addEventListener('contextmenu', e => {
+        e.preventDefault()
+        let x = Math.floor(e.offsetX / 20), y = Math.floor(e.offsetY / 20)
+        if(inGame) {
+            if(board[x][y] != 'M' && board[x][y] != ' ') {
+                return
+            }
+            last = [x, y]
+            if(board[x][y] != 'M') {
+                inGame = false
+                board[x][y] = 'O'
+                endGame()
+                refresh()
+            } else {
+                board[x][y] = 'F'
+                refresh()
+            }
+        }
+    })
+    function init() {
+        let board = []
+        for(let i = 0; i < m; i++) {
+            board.push([])
+            for(let j = 0; j < n; j++) {
+                board[i].push(' ')
+            }
+        }
+        return board
+    }
+
+    function show(element, flag) {
+        if(flag) {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+            start()
+        }
+    }
+
+    function drawRect(i, j, fillColor, strokeColor) {
+        ctx.beginPath()
+        ctx.fillStyle = fillColor
+        ctx.strokeStyle = strokeColor
+        ctx.rect(20 * i, 20 * j, 20, 20)
+        ctx.stroke()
+        ctx.fill()
+    }
+
+    function drawCircle(i, j) {
+        ctx.beginPath()
+        ctx.fillStyle = 'black'
+        ctx.arc(20 * i + 10, 20 * j + 10, 6, 0, 2 * Math.PI)
+        ctx.fill()
+    }
+
+    // X: 挖开的地雷（出现即死） M: 隐藏的地雷 B:挖开的正常格子（周围没有地雷） 数字1-8：挖开的格子（周围有1-8颗地雷）
+    // F:标注出来的地雷 空格：没有挖开的正常格子 O:错误标注的地雷（出现即死）
+    function refresh() {
+        document.getElementById('canvas').width = m * 20
+        document.getElementById('canvas').height = n * 20
+        let remain = 0
+        let found = 0
+        for (let i = 0; i < m; i++) {
+            for (let j = 0; j < n; j++) {
+                if (board[i][j] == ' ' || board[i][j] == 'M') {
+                    if(board[i][j] == ' ') {
+                        remain++
+                    }
+                    drawRect(i, j, closeBlock, 'white');
+                } else if (board[i][j] == 'X') {
+                    drawRect(i, j, 'white', 'grey');
+                    drawCircle(i, j);
+                } else if (board[i][j] == 'B') {
+                    drawRect(i, j, 'white', 'grey');
+                } else if (board[i][j] == 'F') {
+                    drawRect(i, j, closeBlock, 'white');
+                    drawFlag(i, j)
+                    found++
+                } else if (board[i][j] == 'O') {
+                    drawRect(i, j, closeBlock, 'white');
+                    drawFlag(i, j)
+                    drawX(i, j)
+                } else {
+                    drawRect(i, j, 'white', 'grey');
+                    canvasText(ctx, board[i][j], "15px bold 黑体", color[board[i][j] - '1'], 20 * i + 10, 20 * j + 10);
+                }
+
+                if (last && last[0] == i && last[1] == j) {
+                    ctx.beginPath()
+                    ctx.strokeStyle = 'red'
+                    ctx.rect(20 * i, 20 * j, 20, 20)
+                    ctx.stroke()
+                }
+            }
+        }
+        document.getElementById('remain').innerText = String(cnt - found)
+        if(remain === 0 && inGame) {
+            inGame = false
+            show(document.getElementById('success'), true)
+            console.log(timeInter)
+            if(timeInter) {
+                clearInterval(timeInter)
+                timeInter = undefined
+            }
+        } else if(!inGame) {
+            show(document.getElementById('fail'), true)
+            if(timeInter) {
+                clearInterval(timeInter)
+                timeInter = undefined
+            }
+        }
+    }
+    function canvasText(ctx, text, font, color, x, y) {
+        ctx.font = font;
+        ctx.fillStyle = color;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, x, y);
+    }
+
+    function drawFlag(x, y) {
+        x = x * 20
+        y = y * 20
+        ctx.beginPath()
+        ctx.strokeStyle = 'black'
+        ctx.fillStyle = 'red'
+        ctx.moveTo(x + 5, y + 5)
+        ctx.lineTo(x + 13, y + 10)
+        ctx.lineTo(x + 5, y + 10)
+        ctx.lineTo(x + 5, y + 15)
+        ctx.closePath()
+        ctx.stroke()
+        ctx.fill()
+    }
+
+    function drawX(x, y) {
+        x = x * 20
+        y = y * 20
+        ctx.strokeStyle = 'black'
+        ctx.beginPath()
+        ctx.moveTo(x, y)
+        ctx.lineTo(x + 20, y + 20)
+        ctx.stroke()
+        ctx.beginPath()
+        ctx.moveTo(x + 20, y)
+        ctx.lineTo(x, y + 20)
+        ctx.stroke()
+    }
+
+
+
+    function endGame() {
+        for(let i = 0; i < m; i++) {
+            for (let j = 0; j < n; j++) {
+                if(board[i][j] == 'M') {
+                    board[i][j] = 'X'
+                } else if(board[i][j] == ' ') {
+                    let mC = 0
+                    for(let d of dir) {
+                        let nextI = i + d[0], nextJ = j + d[1]
+                        if(nextI >= 0 && nextI < m && nextJ >= 0 && nextJ < n && (board[nextI][nextJ] == 'M' || board[nextI][nextJ] == 'F' || (board[nextI][nextJ] == 'M' || board[nextI][nextJ] == 'X'))) {
+                            mC++;
+                        }
+                    }
+                    if(mC > 0) {
+                        board[i][j] = mC
+                    } else {
+                        board[i][j] = 'B'
+                    }
+                }
+            }
+        }
+    }
+
+    function click(i, j) {
+        if(board[i][j] == 'M') {
+            inGame = false
+            board[i][j] = 'X'
+            endGame()
+            return
+        }
+        if(board[i][j] >= '1' && board[i][j] <= '8') {
+            let fC = 0
+            for(let d of dir) {
+                let nextI = i + d[0], nextJ = j + d[1]
+                if(nextI >= 0 && nextI < m && nextJ >= 0 && nextJ < n && board[nextI][nextJ] == 'F') {
+                    fC++;
+                }
+            }
+            if(fC == board[i][j]) {
+                for(let d of dir) {
+                    let nextI = i + d[0], nextJ = j + d[1]
+                    if(nextI >= 0 && nextI < m && nextJ >= 0 && nextJ < n && board[nextI][nextJ] == ' ') {
+                        click(nextI, nextJ)
+                    }
+                }
+            }
+        } else if(board[i][j] == ' ') {
+            let mC = 0
+            for(let d of dir) {
+                let nextI = i + d[0], nextJ = j + d[1]
+                if(nextI >= 0 && nextI < m && nextJ >= 0 && nextJ < n && (board[nextI][nextJ] == 'M' || board[nextI][nextJ] == 'F')) {
+                    mC++;
+                }
+            }
+            if(mC > 0) {
+                board[i][j] = mC;
+                return
+            }
+            board[i][j] = 'B'
+            for(let d of dir) {
+                let nextI = i + d[0], nextJ = j + d[1]
+                if (nextI >= 0 && nextI < m && nextJ >= 0 && nextJ < n && board[nextI][nextJ] == ' ') {
+                    click(nextI, nextJ)
+                }
+            }
+        }
+
+    }
+    function initDb () {
+        let request = window.indexedDB.open('minesweeper', 1)
+        request.onerror = ev => {
+        }
+        request.onsuccess = ev => {
+            db = request.result;
+            console.log(db.version)
+            console.log(db.objectStoreNames)
+        }
+        request.onupgradeneeded = ev => {
+            console.log('onupgradeneeded')
+            db = ev.target.result;
+            console.log(db.objectStoreNames)
+            if (!db.objectStoreNames.contains('rank')) {
+                db.createObjectStore('rank', {keyPath: 'id'});
+                console.log('rank created')
+            }
+        }
+    }
+    function addRank() {
+        if(db) {
+            let rank = {}
+            rank.id = `${n}-${m}-${cnt}-${name}`
+            rank.createdAt = new Date()
+            rank.timeCost = timeCost
+            rank.row = n
+            rank.col = m
+            rank.cnt = cnt
+            rank.name = name
+            getRank(rank.id, result => {
+                if(result && result.timeCost > rank.timeCost) {
+                    db.transaction(['rank'], 'readwrite').objectStore('rank').put(rank)
+                } else {
+                    db.transaction(['rank'], 'readwrite').objectStore('rank').add(rank)
+                }
+            })
+
+        }
+    }
+    function save() {
+        name = document.getElementById('name').value
+        if(!name) {
+            alert("Name can not be empty!")
+        } else {
+            addRank()
+            show(document.getElementById('success'), false)
+        }
+    }
+    function getRanks(callback) {
+        let req = db.transaction(['rank']).objectStore('rank').getAll()
+        req.onsuccess = ev => {
+            let cur = req.result.filter(r => r.row == n && r.col == m && r.cnt == cnt);
+            cur.sort((r1,r2) => r1.timeCost - r2.timeCost)
+            callback(cur)
+        }
+    }
+    function getRank(id, callback) {
+        let req = db.transaction(['rank']).objectStore('rank').get(id)
+        req.onsuccess = e => {
+            callback(req.result)
+        }
+    }
+    function showRanks() {
+        //let req = db.transaction(['rank'], 'readwrite').objectStore('rank').clear()
+        getRanks(cur => {
+            console.log(cur)
+            if(cur.length) {
+                document.getElementById('rank').style.display = 'block'
+                let data = ''
+                for(let [index, item] of cur.entries()) {
+                    data += `<tr><td>${index + 1}</td><td>${item.name}</td><td>${item.timeCost}</td></tr>`
+                }
+                document.getElementById('rankList').innerHTML = `<h2>Ranks(${n} Rows ${m} Columns ${cnt} mines)</h2>` +
+                    '<table>\n' +
+                    '  <tr>\n' +
+                    '    <th>Rank</th>\n' +
+                    '    <th>Name</th>\n' +
+                    '    <th>Time Cost</th>\n' +
+                    '  </tr>\n' + data +
+                    '</table>'
+            } else {
+                document.getElementById('noRank').style.display = 'block'
+            }
+        })
+    }
+    start()
+</script>
+<style>
+    table {
+        font-family: arial, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    td, th {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+    }
+
+    tr:nth-child(even) {
+        background-color: #dddddd;
+        color: black;
+    }
+    button{
+        color: black;
+        background: white;
+        padding: 5px 20px;
+    }
+    input {
+        padding: 5px;
+    }
+    .padding5 {
+        padding: 5px 0;
+    }
+</style>
+</html>
