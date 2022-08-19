@@ -5,21 +5,23 @@
     <title>扫雷</title>
 </head>
 <body style="width: 100%; height: 100%;margin: 0">
-<div style="width: 210px; padding: 30px;margin-top:20px;float: left;height: 100%;border-right: 1px solid #eee">
-    <div class="padding5"><label>雷数：</label><input id="cnt" value="10"/></div>
-    <div class="padding5"><label>行数：</label><input id="row" value="10"/></div>
-    <div class="padding5"><label>列数：</label><input id="col" value="20"/></div>
-    <button onclick="start()" style="margin-top: 5px">开始</button></div>
-<div style="position: absolute;top: 80px;left: 50%; transform: translate(-50%, 0)">
-    <div style="border-bottom: 1px solid #eee;width: 100%;margin-bottom: 10px;">
-        <div style="font-weight: bold;display: none;width: 180px;margin: auto;font-size: 20px;" id="rank1"><label>最快记录：</label><label id="r1">0</label><label>s</label></div>
+<div style="position: relative;margin: auto;display: inline-block">
+    <div style="width: 210px; padding: 30px;margin-top:20px;float: left;height: 100%;border-right: 1px solid #eee">
+        <div class="padding5"><label>雷数：</label><input id="cnt" value="40"/></div>
+        <div class="padding5"><label>行数：</label><input id="row" value="20"/></div>
+        <div class="padding5"><label>列数：</label><input id="col" value="20"/></div>
+        <button onclick="start()" style="margin-top: 5px">开始</button></div>
+    <div style="position: absolute;top: 30px;left: 300px;">
+        <div style="border-bottom: 1px solid #eee;width: 100%;margin-bottom: 10px;">
+            <div style="font-weight: bold;display: none;width: 180px;margin: auto;font-size: 20px;" id="rank1"><label>最快记录：</label><label id="r1">0</label><label>s</label></div>
+        </div>
+        <div style="margin: auto;width: 460px">
+            <button onclick="showRanks()" style="float: left;margin-bottom: 5px;">Ranks</button>
+            <div style="display: inline-block;margin-top: 2px;margin-left: 5px;"><label>剩余雷数目：</label><label id="remain">40</label>
+                <label>用时：</label><label id="time">00:00:00</label></div>
+        </div>
+        <canvas id="canvas" width="800px" height="600px" style="border: 5px solid #30451b;"></canvas>
     </div>
-    <div style="margin: auto;width: 460px">
-        <button onclick="showRanks()" style="float: left;margin-bottom: 5px;">Ranks</button>
-        <div style="display: inline-block;margin-top: 2px;margin-left: 5px;"><label>剩余雷数目：</label><label id="remain">40</label>
-            <label>用时：</label><label id="time">00:00:00</label></div>
-    </div>
-    <canvas id="canvas" width="800px" height="600px" style="border: 5px solid #30451b;"></canvas>
 </div>
 <div id="success" style="width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); position: relative;z-index: 99999; display: none">
     <div style="position: absolute;top: 30%;left: 50%; transform: translate(-50%, -50%); font-size: 50px;color: white">
